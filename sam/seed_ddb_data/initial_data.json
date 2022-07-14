@@ -1,0 +1,114 @@
+[
+  {
+    "pk": "reports",
+    "sk": "report-0",
+    "gsi1pk": "report-0",
+    "gsi1sk": "Other",
+    "labels": [],
+    "name": "Other"
+  },
+  {
+    "pk": "reports",
+    "sk": "report-1",
+    "gsi1pk": "report-1",
+    "gsi1sk": "Damaged Fire Hydrant",
+    "labels": [
+      "Fire Hydrant",
+      "Hydrant"
+    ],
+    "name": "Damaged Fire Hydrant"
+  },
+  {
+    "pk": "reports",
+    "sk": "report-2",
+    "gsi1pk": "report-2",
+    "gsi1sk": "Damaged Traffic Light",
+    "labels": [
+      "Traffic Light",
+      "Utility Pole",
+      "Lamp Post"
+    ],
+    "name": "Damaged Traffic Light"
+  },
+  {
+    "pk": "reports",
+    "sk": "report-3",
+    "gsi1pk": "report-3",
+    "gsi1sk": "Graffiti",
+    "labels": [
+      "Graffiti"
+    ],
+    "name": "Graffiti"
+  },
+  {
+    "pk": "reports",
+    "sk": "report-4",
+    "gsi1pk": "report-4",
+    "gsi1sk": "Pot Hole",
+    "labels": [
+      "Hole",
+      "Street",
+      "Gravel"
+    ],
+    "name": "Pot Hole"
+  },
+  {
+    "pk": "reports",
+    "sk": "report-5",
+    "gsi1pk": "report-5",
+    "gsi1sk": "Damaged Mailbox",
+    "labels": [
+      "Mailbox",
+      "Private Mailbox",
+      "Letterbox"
+    ],
+    "name": "Damaged Mailbox"
+  },
+  {
+    "pk": "reports",
+    "sk": "report-6",
+    "gsi1pk": "report-6",
+    "gsi1sk": "Damaged Road Sign",
+    "labels": [
+      "Road Sign",
+      "Sign",
+      "Symbol"
+    ],
+    "name": "Damaged Road Sign"
+  },
+  {
+    "pk": "reports",
+    "sk": "report-7",
+    "gsi1pk": "report-7",
+    "gsi1sk": "Damaged Street Light",
+    "labels": [
+      "Utility Pole",
+      "Road Sign",
+      "Sign"
+    ],
+    "name": "Damaged Street Light"
+  },
+  {
+    "pk": "reports",
+    "sk": "report-8",
+    "gsi1pk": "report-8",
+    "gsi1sk": "Damaged Sidewalk",
+    "labels": [
+      "Path",
+      "Pavement"
+    ],
+    "name": "Damaged Sidewalk"
+  },
+  {
+    "pk": "reports",
+    "sk": "report-9",
+    "gsi1pk": "report-9",
+    "gsi1sk": "Damaged Utility Box",
+    "labels": [
+      "Box",
+      "Machine",
+      "Appliance"
+    ],
+    "name": "Damaged Utility Box"
+  }
+]

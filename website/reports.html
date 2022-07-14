@@ -1,0 +1,92 @@
+<!--
+Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+SPDX-License-Identifier: MIT-0
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1128.0.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+	<script src="https://cdn.jsdelivr.net/npm/popper.js@1.14.3/dist/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <script src="https://unpkg.com/maplibre-gl@2.1.9/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@2.1.9/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/amazon-location-helpers@1"></script>
+    <script src="/js/moment.min.js"></script>
+    <style>
+        .mapboxgl-popup {
+            max-width: 400px;
+            font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+        }
+    </style>
+    <title>Maintenance Reporting</title>
+</head>
+<body class="vh-100">
+<div class="container-fluid h-100 p-2">
+    <div class="row h-100 g-0">
+        <div class="col h-100">
+            <div id="map" class="h-100"></div>
+        </div>
+        <div class="col h-100 d-flex flex-column" style="padding-left:0.5em">
+            <div class="card text-center" id="instruction-card">
+                <div class="card-header">
+                    <h5 class="card-title m-0">Instructions</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Select a marker to view details...</p>
+                </div>
+            </div>
+            <div class="card text-center mb-2" id="details-card" style="display:none">
+                <h5 class="card-header p-1 d-flex justify-content-between align-items-center">
+                    <span id="details-title">Damaged Fire Hydrant</span>
+                    <button id="details-card-resolve-button" type="button" class="btn btn-primary btn-sm">Resolve</button>
+                </h5>
+                <div class="card-body p-2">
+                    <div class="container px-0">
+                        <div class="row align-items-start">
+                            <div class="col px-1">
+                                <span style="font-weight:bold">Relevant Reports (ML)</span><br />
+                                <span id="details-card-relevant-reports">Damaged Fire Hydrant<br />Pot Hole</span>
+                            </div>
+                            <div class="col px-1">
+                                <span style="font-weight:bold">Identified Labels (ML)</span><br />
+                                <span id="details-card-identified-labels">Label 1<br />Label 2</span>
+                            </div>
+                            <div class="col px-1">
+                                <span style="font-weight:bold">Location (Image)</span><br />
+                                <span id="details-card-location-image">Latitude<br />Longitude</span>
+                                <br />
+                                <br />
+                                <span style="font-weight:bold">Location (Mobile)</span><br />
+                                <span id="details-card-location-mobile">Latitude<br />Longitude</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer text-muted p-1">
+                    <div class="container px-0">
+                        <div class="row mx-auto">
+                            <div class="col px-0" style="text-align:left" id="details-card-last-status">
+                                Reported 2 days ago
+                            </div>
+                            <div class="col-8 px-0" style="text-align:right" id="details-card-submission-id">
+                                769c40aa-62b6-420b-bd1d-ce7b5d342937
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="details-img-container" class="flex-grow-1">
+                <a id="details-img-link" href="" target="new"><img id="details-img" class="img-fluid align-self-start" style="max-height:500px" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs%3D" alt="Picture of Damage"></a>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+<script src="/js/config.js"></script>
+<script src="/js/map.js"></script>
+</body>
+</html>

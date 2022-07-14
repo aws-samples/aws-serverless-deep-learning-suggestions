@@ -1,0 +1,625 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Deep Learning Suggestion Blog Demo
+  **WARNING** This template creates resources which incur charges. You will be billed for the AWS resources used if you create a stack from this template.
+Metadata:
+  AWS::ServerlessRepo::Application:
+    Name: deep-learning-suggestions
+    Description: A sample web application where citizens can report damage to government property by taking a picture, and selecting suggestions based on the image content. For example, reporting a damaged road sign, or graffiti.
+    Author: Caesar Kabalan
+    SpdxLicenseId: MIT-0
+    LicenseUrl: ../LICENSE
+    ReadmeUrl: ../README
+    Labels: [ 'public-sector', 'government', 'rekognition' ]
+    HomePageUrl: https://github.com/ckabalan/my-app-project
+    SemanticVersion: 0.9.0
+    SourceCodeUrl: https://github.com/ckabalan/my-app-project
+Parameters:
+  LogLevel:
+    Type: String
+    Description: AWS Lambda function logging level
+    AllowedValues:
+      - CRITICAL
+      - ERROR
+      - WARNING
+      - INFO
+      - DEBUG
+      - TRACE
+    Default: DEBUG
+  AllowOriginMode:
+    Type: String
+    Description: Sets the Access-Control-Allow-Origin header value
+    AllowedValues:
+      - Strict / Amazon CloudFront Only
+      - Allow All Origins
+    Default: Strict / Amazon CloudFront Only
+Conditions:
+  StrictOriginOn: !Equals
+    - !Ref 'AllowOriginMode'
+    - Strict / Amazon CloudFront Only
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  OriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: Deep Learning Suggestion Blog Static Website Amazon CloudFront Identity
+  StaticWebsite:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+        - dl-suggest-blog-static-website-${Unique}
+        - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+  UploadedImages:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+        - dl-suggest-blog-uploaded-images-${Unique}
+        - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - HEAD
+              - GET
+              - PUT
+              - POST
+              - DELETE
+            AllowedOrigins:
+              - !If [ StrictOriginOn, !Sub 'https://${CloudFront.DomainName}', '*' ]
+            ExposedHeaders:
+              - ETag
+            Id: CORSRule
+            MaxAge: 3600
+  StaticWebsiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Sub
+        - dl-suggest-blog-static-website-${Unique}
+        - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Id: WebAccess
+        Statement:
+          - Sid: CloudFrontReadForGetBucketObjects
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::cloudfront:user/CloudFront Origin Access Identity ${OriginAccessIdentity}'
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
+            Resource: !Sub
+              - arn:${AWS::Partition}:s3:::dl-suggest-blog-static-website-${Unique}/*
+              - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+          - Sid: DenyPlaintextAccess
+            Principal: '*'
+            Effect: Deny
+            Action: s3:*
+            Resource:
+              - !Sub
+                - arn:${AWS::Partition}:s3:::dl-suggest-blog-static-website-${Unique}
+                - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+              - !Sub
+                - arn:${AWS::Partition}:s3:::dl-suggest-blog-static-website-${Unique}/*
+                - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+  UploadedImagesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DependsOn: UploadedImages
+    Properties:
+      Bucket: !Sub
+        - dl-suggest-blog-uploaded-images-${Unique}
+        - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Id: WebAccess
+        Statement:
+          - Sid: CloudFrontReadForGetBucketObjects
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::cloudfront:user/CloudFront Origin Access Identity ${OriginAccessIdentity}'
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
+            Resource: !Sub
+              - arn:${AWS::Partition}:s3:::dl-suggest-blog-uploaded-images-${Unique}/*
+              - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+          - Sid: DenyPlaintextAccess
+            Principal: '*'
+            Effect: Deny
+            Action: s3:*
+            Resource:
+              - !Sub
+                - arn:${AWS::Partition}:s3:::dl-suggest-blog-uploaded-images-${Unique}
+                - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+              - !Sub
+                - arn:${AWS::Partition}:s3:::dl-suggest-blog-uploaded-images-${Unique}/*
+                - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+  CloudFront:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: Deep Learning Suggestion Blog Static Website
+        # Uncomment the following if you want to restrict access to the US.
+        # Also consider changing the PriceClass option
+        #Restrictions:
+        #  GeoRestriction:
+        #    Locations:
+        #      - US
+        #    RestrictionType: whitelist
+        DefaultCacheBehavior:
+          ForwardedValues:
+            QueryString: true
+          TargetOriginId: !Sub 'S3-Static-Website'
+          ViewerProtocolPolicy: redirect-to-https
+          Compress: true
+        DefaultRootObject: index.html
+        CacheBehaviors:
+          - ForwardedValues:
+              QueryString: true
+            TargetOriginId: !Sub 'S3-Uploaded-Images'
+            ViewerProtocolPolicy: redirect-to-https
+            Compress: true
+            PathPattern: /maint-img/*
+        Enabled: true
+        HttpVersion: http2
+        Origins:
+          - DomainName: !Sub
+              - dl-suggest-blog-static-website-${Unique}.s3.${AWS::Region}.amazonaws.com
+              - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+            Id: !Sub 'S3-Static-Website'
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${OriginAccessIdentity}'
+          - DomainName: !Sub
+              - dl-suggest-blog-uploaded-images-${Unique}.s3.${AWS::Region}.amazonaws.com
+              - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+            Id: !Sub 'S3-Uploaded-Images'
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${OriginAccessIdentity}'
+        PriceClass: PriceClass_100
+        IPV6Enabled: false
+  ReportTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+        - AttributeName: gsi1pk
+          AttributeType: S
+        - AttributeName: gsi1sk
+          AttributeType: S
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: gsi1pk
+              KeyType: HASH
+            - AttributeName: gsi1sk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+  API:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: v1
+      Cors:
+        AllowMethods: '''DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'''
+        AllowHeaders: '''Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'''
+        AllowOrigin: !If [ StrictOriginOn, !Sub '''https://${CloudFront.DomainName}''', '''*''' ]
+  GetSubmissionsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${GetSubmissions}
+      RetentionInDays: 7
+  GetSubmissions:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: get_submissions/
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Timeout: 5
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /submissions
+            Method: get
+            RestApiId: !Ref 'API'
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          LOGURU_LEVEL: !Ref 'LogLevel'
+          REPORT_TABLE: !Ref 'ReportTable'
+          ALLOW_ORIGIN_HEADER_VALUE: !If [ StrictOriginOn, !Sub 'https://${CloudFront.DomainName}', '*' ]
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !GetAtt 'ReportTable.Arn'
+                - !Sub '${ReportTable.Arn}/index/*'
+  GetSubmissionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${GetSubmission}
+      RetentionInDays: 7
+  GetSubmission:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: get_submission/
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Timeout: 5
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /submission/{submission_id}
+            Method: get
+            RestApiId: !Ref 'API'
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          LOGURU_LEVEL: !Ref 'LogLevel'
+          REPORT_TABLE: !Ref 'ReportTable'
+          ALLOW_ORIGIN_HEADER_VALUE: !If [ StrictOriginOn, !Sub 'https://${CloudFront.DomainName}', '*' ]
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource:
+                - !GetAtt 'ReportTable.Arn'
+  PatchSubmissionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${PatchSubmission}
+      RetentionInDays: 7
+  PatchSubmission:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: patch_submission/
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Timeout: 5
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /submission/{submission_id}
+            Method: patch
+            RestApiId: !Ref 'API'
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          LOGURU_LEVEL: !Ref 'LogLevel'
+          REPORT_TABLE: !Ref 'ReportTable'
+          ALLOW_ORIGIN_HEADER_VALUE: !If [ StrictOriginOn, !Sub 'https://${CloudFront.DomainName}', '*' ]
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource:
+                - !GetAtt 'ReportTable.Arn'
+  GetReportsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${GetReports}
+      RetentionInDays: 7
+  GetReports:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: get_reports/
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Timeout: 5
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /reports
+            Method: get
+            RestApiId: !Ref 'API'
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          LOGURU_LEVEL: !Ref 'LogLevel'
+          REPORT_TABLE: !Ref 'ReportTable'
+          ALLOW_ORIGIN_HEADER_VALUE: !If [ StrictOriginOn, !Sub 'https://${CloudFront.DomainName}', '*' ]
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !GetAtt 'ReportTable.Arn'
+  ProcessUploadLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ProcessUpload}
+      RetentionInDays: 7
+  ProcessUpload:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: process_upload/
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Timeout: 30
+      Events:
+        ApiEvent:
+          Type: S3
+          Properties:
+            Bucket: !Ref 'UploadedImages'
+            Events:
+              - s3:ObjectCreated:Put
+              - s3:ObjectCreated:Post
+              - s3:ObjectCreated:CompleteMultipartUpload
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          LOGURU_LEVEL: !Ref 'LogLevel'
+          REPORT_TABLE: !Ref 'ReportTable'
+          ALLOW_ORIGIN_HEADER_VALUE: !If [ StrictOriginOn, !Sub 'https://${CloudFront.DomainName}', '*' ]
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !Sub
+          - arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:DL-Suggest-Blog-Process-Image-DLQ-${Unique}
+          - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource:
+                - !Sub
+                  - arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:DL-Suggest-Blog-Process-Image-DLQ-${Unique}
+                  - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+            - Effect: Allow
+              Action:
+                - rekognition:DetectLabels
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+              Resource:
+                - !Sub
+                  - arn:${AWS::Partition}:s3:::dl-suggest-blog-uploaded-images-${Unique}/maint-img/*
+                  - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt 'ReportTable.Arn'
+  CustomSeedDDBData:
+    # Logging disabled on this function
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: seed_ddb_data/
+      Handler: app.handler
+      Runtime: python3.9
+      Timeout: 30
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          LOGURU_LEVEL: !Ref 'LogLevel'
+      Policies:
+        # AWSLambdaBasicExecutionRole intentionally omitted. If allowed, it will create
+        # a new log group during the deletion of the stack which cannot be cleaned up
+        # automatically. No way to prevent that or specify an order, so we choose to not
+        # allow logging at all.
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:BatchWriteItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt 'ReportTable.Arn'
+  CustomSeedS3Data:
+    # Logging disabled on this function
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: seed_s3_data/
+      Handler: app.handler
+      Runtime: python3.9
+      Timeout: 30
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          LOGURU_LEVEL: !Ref 'LogLevel'
+      Policies:
+        # AWSLambdaBasicExecutionRole intentionally omitted. If allowed, it will create
+        # a new log group during the deletion of the stack which cannot be cleaned up
+        # automatically. No way to prevent that or specify an order, so we choose to not
+        # allow logging at all.
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetBucketLocation
+                - s3:ListBucket
+              Resource:
+                - !Sub
+                  - arn:${AWS::Partition}:s3:::dl-suggest-blog-static-website-${Unique}
+                  - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+                - !Sub
+                  - arn:${AWS::Partition}:s3:::dl-suggest-blog-uploaded-images-${Unique}
+                  - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+            - Effect: Allow
+              Action:
+                - s3:DeleteObject
+                - s3:PutObject
+                - s3:GetObject
+              Resource:
+                - !Sub
+                  - arn:${AWS::Partition}:s3:::dl-suggest-blog-static-website-${Unique}/*
+                  - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+                - !Sub
+                  - arn:${AWS::Partition}:s3:::dl-suggest-blog-uploaded-images-${Unique}/*
+                  - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+  SeedDDBData:
+    Type: Custom::SeedDDBData
+    Properties:
+      ServiceToken: !GetAtt 'CustomSeedDDBData.Arn'
+      TableName: !Ref 'ReportTable'
+  SeedS3Data:
+    Type: Custom::SeedS3Data
+    Properties:
+      ServiceToken: !GetAtt 'CustomSeedS3Data.Arn'
+      UniqueSuffix: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+      IdentityPoolId: !Ref 'CognitoIdentityPool'
+      ApiBaseURL: !Sub 'https://${API}.execute-api.${AWS::Region}.amazonaws.com/v1'
+      StaticWebsiteBucket: !Ref StaticWebsite
+      UploadedImagesBucket: !Ref UploadedImages
+  ImageProcessingDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub
+        - DL-Suggest-Blog-Process-Image-DLQ-${Unique}
+        - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+      KmsMasterKeyId: alias/aws/sqs
+  Map:
+    Type: AWS::Location::Map
+    Properties:
+      Configuration:
+        Style: RasterEsriImagery
+      MapName: !Sub
+        - DL-Suggest-Blog-Map-${Unique}
+        - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+  CognitoIdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      IdentityPoolName: !Sub
+        - DL-Suggest-Blog-Identity-Pool-${Unique}
+        - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+      AllowUnauthenticatedIdentities: true
+  CognitoIdentityUnauthenticatedRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - DL-Suggest-Blog-Cognito-Unauth-${Unique}
+        - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                cognito-identity.amazonaws.com:aud: !Ref 'CognitoIdentityPool'
+              ForAnyValue:StringLike:
+                cognito-identity.amazonaws.com:amr: unauthenticated
+      Policies:
+        - PolicyName: Image-Upload-Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource:
+                  - !Sub
+                    - arn:${AWS::Partition}:s3:::dl-suggest-blog-uploaded-images-${Unique}/maint-img/*
+                    - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+        - PolicyName: Maps-Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - geo:GetMap*
+                Resource: !Sub
+                  - arn:${AWS::Partition}:geo:${AWS::Region}:${AWS::AccountId}:map/DL-Suggest-Blog-Map-${Unique}
+                  - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+                # Warning: This is just to provide cross-site abuse, it can be spoofed with a modified browser
+                Condition:
+                  StringLike:
+                    aws:referer:
+                      - !If [ StrictOriginOn, !Sub 'https://${CloudFront.DomainName}/*', '*' ]
+  CognitoIdentityPoolRoleMapping:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Properties:
+      IdentityPoolId: !Ref 'CognitoIdentityPool'
+      Roles:
+        unauthenticated: !GetAtt 'CognitoIdentityUnauthenticatedRole.Arn'
+Outputs:
+  SubmissionURL:
+    Description: Submission/Citizen UI - CloudFront Static Website
+    Value: !Sub 'https://${CloudFront.DomainName}/index.html'
+  MapViewURL:
+    Description: Viewing/Government UI - CloudFront Static Website
+    Value: !Sub 'https://${CloudFront.DomainName}/reports.html'
+  #WebsiteBucketName:
+  #  Description: S3 Bucket Name for Static Content Upload
+  #  Value: !Ref 'StaticWebsite'
+  #APIBaseURL:
+  #  Description: API Gateway endpoint URL for v1 stage
+  #  Value: !Sub 'https://${API}.execute-api.${AWS::Region}.amazonaws.com/v1'
+  #IdentityPoolId:
+  #  Description: Identity Pool Id for temporary credentials from Cognito
+  #  Value: !Ref 'CognitoIdentityPool'
+  #UniqueSuffix:
+  #  Description: A suffix appended to resources to make their names unique
+  #  Value: !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId']]]]

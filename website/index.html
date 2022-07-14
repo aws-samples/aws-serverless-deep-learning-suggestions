@@ -1,0 +1,62 @@
+<!--
+Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+SPDX-License-Identifier: MIT-0
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+	<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+	<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1128.0.min.js"></script>
+	<link href="/css/main.css" rel="stylesheet">
+	<title>Maintenance Reporting</title>
+</head>
+<body>
+<div class="container">
+	<h1 class="text-center mt-3">Maintenance Reporting</h1>
+	<div class="image-area my-3">
+		<div id="upload-placeholder">
+			<svg xmlns="http://www.w3.org/2000/svg" width="50%" height="25%" opacity="70%" fill="currentColor" class="bi bi-card-image mx-auto d-block" viewBox="0 0 16 16">
+				<path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+				<path d="M1.5 2A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13zm13 1a.5.5 0 0 1 .5.5v6l-3.775-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12v.54A.505.505 0 0 1 1 12.5v-9a.5.5 0 0 1 .5-.5h13z"/>
+			</svg>
+		</div>
+		<div id="upload-preview-container" class="d-none">
+			<img id="upload-preview" alt="Upload Preview" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs%3D" class="img-fluid w-100 h-auto">
+		</div>
+	</div>
+	<div class="custom-file my-3" id="upload-selector">
+		<div class="input-group">
+			<input type="file" class="form-control" id="myFileInput" accept="image/*">
+			<label class="input-group-text btn btn-primary" id="myFileUploadLabel">Upload</label>
+		</div>
+	</div>
+	<div class="progress mb-3" style="height: 2rem; display: none;" id="upload-progress-bar">
+		<div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+	</div>
+	<div id="reports" class="mb-3" style="display:none;">
+		<div class="callout-box" id="reports-suggested"></div>
+		<div class="callout-box" id="reports-other"></div>
+		<button type="submit" class="btn btn-primary w-100" id="reports-submit">Submit Report</button>
+	</div>
+	<div id="getting-location" class="mb-3" style="text-align:center; display:none;">
+		<h3>Submitting Report...</h3>
+		<span style="font-weight:bold">Accessing Device Location</span><br />
+		<span>Please Accept Location Permissions</span><br />
+	</div>
+	<div id="thanks" class="mb-3" style="text-align:center; display:none;">
+		<h3>Thank you for your submission!</h3>
+		<span style="font-weight:bold">Submission Info</span><br />
+		<span id="submission-confirmation">Waiting for Confirmation</span><br />
+		<span id="submission-timestamp"></span><br />
+		<span id="submission-id"></span>
+	</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+<script src="/js/config.js"></script>
+<script src="/js/submit.js"></script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: MIT-0
+ */
+body {
+    background-color: #003181;
+    color: #FFFFFF;
+}
+.btn-primary, .btn-primary:hover, .btn-primary:active, .btn-primary:visited {
+    background-color: #ff9900 !important;
+    border-color: #ff9900 !important;
+}
+.btn-outline-primary, .btn-outline-primary:hover, .btn-outline-primary:active, .btn-outline-primary:visited {
+    border-color: #ff9900 !important;
+    color: #ff9900 !important;
+}
+.btn-outline-primary:hover {
+    border-color: #ff9900 !important;
+    background-color: #ff9900 !important;
+    color: #FFFFFF !important;
+}
+.btn-check:active+.btn-outline-primary, .btn-check:checked+.btn-outline-primary, .btn-outline-primary.active, .btn-outline-primary.dropdown-toggle.show, .btn-outline-primary:active {
+    border-color: #ff9900 !important;
+    background-color: #ff9900 !important;
+    color: #FFFFFF !important;
+}
+.callout-box {
+    border-color: #000000;
+    border-width: 1px;
+    border-top-left-radius: .25rem;
+    border-top-right-radius: .25rem;
+}
+.image-area {
+    border: 3px dashed rgba(255, 255, 255, 0.7);
+    position: relative;
+    max-height: 50%;
+}
+#upload-placeholder {
+    height: auto;
+}
+#upload-preview-container {
+    display: flex;
+    max-height: 49%;
+    padding:1rem;
+}
+#upload-preview {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
