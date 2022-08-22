@@ -274,14 +274,8 @@ Resources:
           ALLOW_ORIGIN_HEADER_VALUE: !If [ StrictOriginOn, !Sub 'https://${CloudFront.DomainName}', '*' ]
       Policies:
         - AWSLambdaBasicExecutionRole
-        - Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:Query
-              Resource:
-                - !GetAtt 'ReportTable.Arn'
-                - !Sub '${ReportTable.Arn}/index/*'
+        - DynamoDBReadPolicy:
+          TableName: !GetAtt 'ReportTable.Arn'
   GetSubmissionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -310,13 +304,8 @@ Resources:
           ALLOW_ORIGIN_HEADER_VALUE: !If [ StrictOriginOn, !Sub 'https://${CloudFront.DomainName}', '*' ]
       Policies:
         - AWSLambdaBasicExecutionRole
-        - Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:GetItem
-              Resource:
-                - !GetAtt 'ReportTable.Arn'
+        - DynamoDBReadPolicy:
+          TableName: !GetAtt 'ReportTable.Arn'
   PatchSubmissionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -345,13 +334,8 @@ Resources:
           ALLOW_ORIGIN_HEADER_VALUE: !If [ StrictOriginOn, !Sub 'https://${CloudFront.DomainName}', '*' ]
       Policies:
         - AWSLambdaBasicExecutionRole
-        - Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:UpdateItem
-              Resource:
-                - !GetAtt 'ReportTable.Arn'
+        - DynamoDBWritePolicy:
+          TableName: !GetAtt 'ReportTable.Arn'
   GetReportsLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -380,13 +364,8 @@ Resources:
           ALLOW_ORIGIN_HEADER_VALUE: !If [ StrictOriginOn, !Sub 'https://${CloudFront.DomainName}', '*' ]
       Policies:
         - AWSLambdaBasicExecutionRole
-        - Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:Query
-              Resource:
-                - !GetAtt 'ReportTable.Arn'
+        - DynamoDBReadPolicy:
+          TableName: !GetAtt 'ReportTable.Arn'
   ProcessUploadLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -422,32 +401,19 @@ Resources:
           - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
       Policies:
         - AWSLambdaBasicExecutionRole
-        - Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Action:
-                - sqs:SendMessage
-              Resource:
-                - !Sub
-                  - arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:DL-Suggest-Blog-Process-Image-DLQ-${Unique}
-                  - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
-            - Effect: Allow
-              Action:
-                - rekognition:DetectLabels
-              Resource: '*'
-            - Effect: Allow
-              Action:
-                - s3:GetObject
-              Resource:
-                - !Sub
-                  - arn:${AWS::Partition}:s3:::dl-suggest-blog-uploaded-images-${Unique}/maint-img/*
-                  - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
-            - Effect: Allow
-              Action:
-                - dynamodb:UpdateItem
-                - dynamodb:Query
-              Resource:
-                - !GetAtt 'ReportTable.Arn'
+        - DynamoDBReadPolicy:
+          TableName: !GetAtt 'ReportTable.Arn'
+        - DynamoDBWritePolicy:
+          TableName: !GetAtt 'ReportTable.Arn'
+        - SQSSendMessagePolicy:
+          QueueName: !Sub
+            - arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:DL-Suggest-Blog-Process-Image-DLQ-${Unique}
+            - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+        - S3ReadPolicy:
+          BucketName: !Sub
+            - arn:${AWS::Partition}:s3:::dl-suggest-blog-uploaded-images-${Unique}/maint-img/*
+            - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+        - RekognitionDetectOnlyPolicy: {}
   CustomSeedDDBData:
     # Logging disabled on this function
     Type: AWS::Serverless::Function
@@ -466,14 +432,10 @@ Resources:
         # a new log group during the deletion of the stack which cannot be cleaned up
         # automatically. No way to prevent that or specify an order, so we choose to not
         # allow logging at all.
-        - Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:BatchWriteItem
-                - dynamodb:Query
-              Resource:
-                - !GetAtt 'ReportTable.Arn'
+        - DynamoDBReadPolicy:
+          TableName: !GetAtt 'ReportTable.Arn'
+        - DynamoDBWritePolicy:
+          TableName: !GetAtt 'ReportTable.Arn'
   CustomSeedS3Data:
     # Logging disabled on this function
     Type: AWS::Serverless::Function
@@ -492,31 +454,10 @@ Resources:
         # a new log group during the deletion of the stack which cannot be cleaned up
         # automatically. No way to prevent that or specify an order, so we choose to not
         # allow logging at all.
-        - Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Action:
-                - s3:GetBucketLocation
-                - s3:ListBucket
-              Resource:
-                - !Sub
-                  - arn:${AWS::Partition}:s3:::dl-suggest-blog-static-website-${Unique}
-                  - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
-                - !Sub
-                  - arn:${AWS::Partition}:s3:::dl-suggest-blog-uploaded-images-${Unique}
-                  - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
-            - Effect: Allow
-              Action:
-                - s3:DeleteObject
-                - s3:PutObject
-                - s3:GetObject
-              Resource:
-                - !Sub
-                  - arn:${AWS::Partition}:s3:::dl-suggest-blog-static-website-${Unique}/*
-                  - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
-                - !Sub
-                  - arn:${AWS::Partition}:s3:::dl-suggest-blog-uploaded-images-${Unique}/*
-                  - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+        - S3CrudPolicy:
+          BucketName: !Sub
+            - arn:${AWS::Partition}:s3:::dl-suggest-blog-static-website-${Unique}
+            - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
   SeedDDBData:
     Type: Custom::SeedDDBData
     Properties:
