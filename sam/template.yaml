@@ -274,6 +274,9 @@ Resources:
         AllowMethods: '''DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'''
         AllowHeaders: '''Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'''
         AllowOrigin: !If [ StrictOriginOn, !Sub '''https://${CloudFront.DomainName}''', '''*''' ]
+      MethodSettings:
+        - ThrottlingBurstLimit: 100
+          ThrottlingRateLimit: 50
   GetSubmissionsLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
