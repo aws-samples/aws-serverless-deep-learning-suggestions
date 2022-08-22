@@ -49,6 +49,11 @@ Resources:
         Comment: Deep Learning Suggestion Blog Static Website Amazon CloudFront Identity
   StaticWebsite:
     Type: AWS::S3::Bucket
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: This is not necessary for this project. Customers can enable this if they wish to view the access logs.
     Properties:
       BucketName: !Sub
         - dl-suggest-blog-static-website-${Unique}
@@ -65,6 +70,11 @@ Resources:
               SSEAlgorithm: AES256
   UploadedImages:
     Type: AWS::S3::Bucket
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: This is not necessary for this project. Customers can enable this if they wish to view the access logs.
     Properties:
       BucketName: !Sub
         - dl-suggest-blog-uploaded-images-${Unique}
@@ -166,6 +176,13 @@ Resources:
                 aws:SecureTransport: 'false'
   CloudFront:
     Type: AWS::CloudFront::Distribution
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W10
+            reason: This is not necessary for this project. Customers can enable this if they wish to view the access logs.
+          - id: W70
+            reason: When using the default CloudFront distribution domain you cannot specify the TLS version options. Changing from the default CloudFront distribution would significantly increase the scope and cost of the project by requiring the customer to select a custom domain, deploy a Route53 Hosted Zone, and generate an ACM Certificate.
     Properties:
       DistributionConfig:
         Comment: Deep Learning Suggestion Blog Static Website
@@ -240,6 +257,17 @@ Resources:
         SSEEnabled: true
   API:
     Type: AWS::Serverless::Api
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          # There is currently a bug with cfn_nag that does not propagate these supressions to generated resources
+          # See: https://github.com/stelligent/cfn_nag/issues/422
+          - id: W64
+            reason: This API Gateway does not use API Keys
+          - id: W68
+            reason: This API Gateway does not use API Keys
+          - id: W69
+            reason: This is not necessary for this project. Customers can enable this if they wish to view the access logs.
     Properties:
       StageName: v1
       Cors:
@@ -253,6 +281,13 @@ Resources:
       RetentionInDays: 7
   GetSubmissions:
     Type: AWS::Serverless::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: This does not increase the security of the solutions and greatly increases the cost and scope of the deployment.
+          - id: W92
+            reason: This is not necessary for this project. Customers can enable this once they understand their usage patterns.
     Properties:
       CodeUri: get_submissions/
       Handler: app.lambda_handler
@@ -283,6 +318,13 @@ Resources:
       RetentionInDays: 7
   GetSubmission:
     Type: AWS::Serverless::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: This does not increase the security of the solutions and greatly increases the cost and scope of the deployment.
+          - id: W92
+            reason: This is not necessary for this project. Customers can enable this once they understand their usage patterns.
     Properties:
       CodeUri: get_submission/
       Handler: app.lambda_handler
@@ -313,6 +355,13 @@ Resources:
       RetentionInDays: 7
   PatchSubmission:
     Type: AWS::Serverless::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: This does not increase the security of the solutions and greatly increases the cost and scope of the deployment.
+          - id: W92
+            reason: This is not necessary for this project. Customers can enable this once they understand their usage patterns.
     Properties:
       CodeUri: patch_submission/
       Handler: app.lambda_handler
@@ -343,6 +392,13 @@ Resources:
       RetentionInDays: 7
   GetReports:
     Type: AWS::Serverless::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: This does not increase the security of the solutions and greatly increases the cost and scope of the deployment.
+          - id: W92
+            reason: This is not necessary for this project. Customers can enable this once they understand their usage patterns.
     Properties:
       CodeUri: get_reports/
       Handler: app.lambda_handler
@@ -373,6 +429,13 @@ Resources:
       RetentionInDays: 7
   ProcessUpload:
     Type: AWS::Serverless::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: This does not increase the security of the solutions and greatly increases the cost and scope of the deployment.
+          - id: W92
+            reason: This is not necessary for this project. Customers can enable this once they understand their usage patterns.
     Properties:
       CodeUri: process_upload/
       Handler: app.lambda_handler
@@ -417,6 +480,13 @@ Resources:
   CustomSeedDDBData:
     # Logging disabled on this function
     Type: AWS::Serverless::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: This does not increase the security of the solutions and greatly increases the cost and scope of the deployment.
+          - id: W92
+            reason: This is not necessary for this project. Customers can enable this once they understand their usage patterns.
     Properties:
       CodeUri: seed_ddb_data/
       Handler: app.handler
@@ -439,6 +509,13 @@ Resources:
   CustomSeedS3Data:
     # Logging disabled on this function
     Type: AWS::Serverless::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: This does not increase the security of the solutions and greatly increases the cost and scope of the deployment.
+          - id: W92
+            reason: This is not necessary for this project. Customers can enable this once they understand their usage patterns.
     Properties:
       CodeUri: seed_s3_data/
       Handler: app.handler
@@ -489,6 +566,11 @@ Resources:
         - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
   CognitoIdentityPool:
     Type: AWS::Cognito::IdentityPool
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W57
+            reason: Unauthenticated identies are preferred for this application so users can anonymously but securely upload images to the S3 bucket and render a map from the Amazon Location Service.
     Properties:
       IdentityPoolName: !Sub
         - DL-Suggest-Blog-Identity-Pool-${Unique}
@@ -496,6 +578,11 @@ Resources:
       AllowUnauthenticatedIdentities: true
   CognitoIdentityUnauthenticatedRole:
     Type: AWS::IAM::Role
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: While not ideal, this is necessary to prevent a circular dependency. The resource uses the stack-id as part of the resource name, and the only properties of an IAM Role requiring replacement are Path and RoleName.
     Properties:
       RoleName: !Sub
         - DL-Suggest-Blog-Cognito-Unauth-${Unique}
