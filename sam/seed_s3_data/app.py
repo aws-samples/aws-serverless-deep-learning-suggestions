@@ -18,12 +18,18 @@ def seed_data(event, _):
     logger.debug('Event: ' + json.dumps(event))
     logger.debug(f"Retrieving S3 Static Website Contents...")
     s3 = boto3.client('s3')
+    apigw = boto3.client('apigateway')
+    response = apigw.get_api_key(
+        apiKey=event['ResourceProperties']['APIKeyId'],
+        includeValue=True
+    )
+    api_key = response['value']
     response = s3.list_objects_v2(
         Bucket=event['ResourceProperties']['StaticWebsiteBucket'],
         MaxKeys=1
     )
     if response['KeyCount'] > 0:
-        # Static Website Bucket already has contents, skipping
+        logger.debug(f"Static Website Bucket already has contents, skipping...")
         return
     with zipfile.ZipFile('website.zip', 'r') as zip_ref:
         zip_ref.extractall('/tmp/website/')
@@ -41,6 +47,7 @@ def seed_data(event, _):
                                           'UniqueSuffix'])
     config_data = config_data.replace('REPLACE_ME_API_BASE_URL',
                                       event['ResourceProperties']['ApiBaseURL'])
+    config_data = config_data.replace('REPLACE_ME_API_KEY', api_key)
     with open(config_path, 'w') as file:
         file.write(config_data)
     # Upload the website data

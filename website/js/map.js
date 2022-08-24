@@ -78,11 +78,17 @@ async function initializeMap() {
                 let submissionResponse = $.ajax({
                     type: "GET",
                     url: `${awsConfigOptions.api_base_url}/submissions?status=submitted`,
+                    headers: {
+                        'X-API-Key': awsConfigOptions.api_key
+                    },
                     async: false
                 });
                 let reportResponse = $.ajax({
                     type: "GET",
                     url: `${awsConfigOptions.api_base_url}/reports`,
+                    headers: {
+                        'X-API-Key': awsConfigOptions.api_key
+                    },
                     async: false
                 });
                 window.reportData = reportResponse.responseJSON
@@ -197,6 +203,9 @@ $("#details-card-resolve-button").click(function(e) {
     $.ajax({
         type: 'PATCH',
         url: `${awsConfigOptions.api_base_url}/submission/${submissionUUID}`,
+        headers: {
+            "X-API-Key": awsConfigOptions.api_key
+        },
         data: JSON.stringify(payload),
         success: function(result) {
             console.log('Success:')

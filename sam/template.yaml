@@ -262,23 +262,26 @@ Resources:
         rules_to_suppress:
           # There is currently a bug with cfn_nag that does not propagate these supressions to generated resources
           # See: https://github.com/stelligent/cfn_nag/issues/422
-          - id: W64
-            reason: This API Gateway does not use API Keys
-          - id: W68
-            reason: This API Gateway does not use API Keys
           - id: W69
             reason: This is not necessary for this project. Customers can enable this if they wish to view the access logs.
     Properties:
       StageName: v1
+      Auth:
+        UsagePlan:
+          CreateUsagePlan: PER_API
+          Description: Deep Learning Suggestion Blog API Usage Plan
+          Quota:
+            # Roughly 5 submissions per minute 24/7
+            # (10 API calls * 5 submissions * 60 minutes * 24 hours)
+            # Max ~$0.90/day for the API Gateway and Lambda fees
+            # Additional processing (DynamoDB / Rekognition / S3) would depend
+            # on how many requests are legitimate.
+            Limit: 72000
+            Period: DAY
       Cors:
         AllowMethods: '''DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'''
         AllowHeaders: '''Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'''
         AllowOrigin: !If [ StrictOriginOn, !Sub '''https://${CloudFront.DomainName}''', '''*''' ]
-      MethodSettings:
-        - ResourcePath: '/*'
-          HttpMethod: '*'
-          ThrottlingBurstLimit: 100
-          ThrottlingRateLimit: 50
   GetSubmissionsLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -305,6 +308,8 @@ Resources:
             Path: /submissions
             Method: get
             RestApiId: !Ref 'API'
+            Auth:
+              ApiKeyRequired: true
       Architectures:
         - arm64
       Environment:
@@ -342,6 +347,8 @@ Resources:
             Path: /submission/{submission_id}
             Method: get
             RestApiId: !Ref 'API'
+            Auth:
+              ApiKeyRequired: true
       Architectures:
         - arm64
       Environment:
@@ -379,6 +386,8 @@ Resources:
             Path: /submission/{submission_id}
             Method: patch
             RestApiId: !Ref 'API'
+            Auth:
+              ApiKeyRequired: true
       Architectures:
         - arm64
       Environment:
@@ -416,6 +425,8 @@ Resources:
             Path: /reports
             Method: get
             RestApiId: !Ref 'API'
+            Auth:
+              ApiKeyRequired: true
       Architectures:
         - arm64
       Environment:
@@ -540,6 +551,15 @@ Resources:
             BucketName: !Sub
               - dl-suggest-blog-static-website-${Unique}
               - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - apigateway:GET
+              Resource:
+                - !Sub
+                  - arn:${AWS::Partition}:apigateway:${AWS::Region}::/apikeys/${ApiKeyId}
+                  - ApiKeyId: !Ref APIApiKey
   SeedDDBData:
     Type: Custom::SeedDDBData
     Properties:
@@ -554,6 +574,7 @@ Resources:
       ApiBaseURL: !Sub 'https://${API}.execute-api.${AWS::Region}.amazonaws.com/v1'
       StaticWebsiteBucket: !Ref StaticWebsite
       UploadedImagesBucket: !Ref UploadedImages
+      APIKeyId: !Ref APIApiKey
   ImageProcessingDLQ:
     Type: AWS::SQS::Queue
     Properties:

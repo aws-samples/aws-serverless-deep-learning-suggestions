@@ -15,6 +15,7 @@ simplejson = "^3.17.6"
 pytest = "^7.1.2"
 moto = "^3.1.16"
 coverage = "^6.4.2"
+openapi-spec-validator = "^0.4.0"
 
 [tool.poetry.dev-dependencies]
 

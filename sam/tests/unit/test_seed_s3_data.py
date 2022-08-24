@@ -3,7 +3,7 @@ from unittest import mock
 
 import boto3
 import pytest
-from moto import mock_s3
+from moto import mock_s3, mock_apigateway
 
 from sam.seed_s3_data import app
 
@@ -24,16 +24,24 @@ def cloudformation_event():
             "ApiBaseURL": "TEST_API_BASE_URL",
             "UniqueSuffix": "TEST_UNIQUE_SUFFIX",
             "UploadedImagesBucket": "test-bucket-uploaded-images",
-            "IdentityPoolId": "TEST_IDENTITY_POOL"
+            "IdentityPoolId": "TEST_IDENTITY_POOL",
+            "APIKeyId": "TEST_API_KEY_ID"
         }
     }
 
 
 @mock_s3
+@mock_apigateway
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_seed_data(cloudformation_event):
     boto3.setup_default_session()
+    apigw = boto3.client('apigateway', region_name='us-west-2')
+    response = apigw.create_api_key(
+        value='abcdefghijklmnopqrstuvwxyz',
+        name='TEST_API_KEY_NAME'  # Not Used
+    )
+    cloudformation_event['ResourceProperties']['APIKeyId'] = response['id']
     s3 = boto3.client('s3')
     website_bucket = s3.create_bucket(
         Bucket='test-bucket-static-website',
@@ -51,6 +59,7 @@ def test_seed_data(cloudformation_event):
         assert 'TEST_API_BASE_URL' in config_data
         assert 'TEST_UNIQUE_SUFFIX' in config_data
         assert 'TEST_IDENTITY_POOL' in config_data
+        assert 'abcdefghijklmnopqrstuvwxyz' in config_data
     response = s3.list_objects_v2(
         Bucket='test-bucket-static-website'
     )
@@ -58,10 +67,17 @@ def test_seed_data(cloudformation_event):
 
 
 @mock_s3
+@mock_apigateway
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_seed_data_with_existing_data(cloudformation_event):
     boto3.setup_default_session()
+    apigw = boto3.client('apigateway', region_name='us-west-2')
+    response = apigw.create_api_key(
+        value='abcdefghijklmnopqrstuvwxyz',
+        name='TEST_API_KEY_NAME'  # Not Used
+    )
+    cloudformation_event['ResourceProperties']['APIKeyId'] = response['id']
     s3 = boto3.client('s3')
     website_bucket = s3.create_bucket(
         Bucket='test-bucket-static-website',

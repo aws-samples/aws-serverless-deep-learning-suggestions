@@ -121,6 +121,9 @@ async function getSubmission(subUUID) {
     let response = $.ajax({
         type: "GET",
         url: `${awsConfigOptions.api_base_url}/submission/${subUUID}`,
+        headers: {
+            "X-API-Key": awsConfigOptions.api_key
+        },
         async: false
     });
     window.pollLimit -= 1
@@ -140,6 +143,7 @@ function uuidv4() {
 $(document).ready(function() {
     let request = new XMLHttpRequest();
     request.open("GET", `${awsConfigOptions.api_base_url}/reports`, true);
+    request.setRequestHeader("X-API-Key", awsConfigOptions.api_key);
     request.onload = function (e) {
         if (request.readyState === 4) {
             if (request.status === 200) {
@@ -178,6 +182,9 @@ function submitReport(coordLat, coordLon) {
     $.ajax({
         type: 'PATCH',
         url: `${awsConfigOptions.api_base_url}/submission/${submissionUUID}`,
+        headers: {
+            "X-API-Key": awsConfigOptions.api_key
+        },
         data: JSON.stringify(payload),
         success: function(result) {
             console.log(result)
