@@ -15,7 +15,7 @@ Metadata:
     ReadmeUrl: ../README.md
     Labels: [ 'public-sector', 'government', 'rekognition' ]
     HomePageUrl: https://github.com/ckabalan/my-app-project
-    SemanticVersion: 0.9.4
+    SemanticVersion: 0.9.5
     SourceCodeUrl: https://github.com/ckabalan/my-app-project
 Parameters:
   LogLevel:
