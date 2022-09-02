@@ -3,7 +3,7 @@ from unittest import mock
 
 import boto3
 import pytest
-from moto import mock_dynamodb2
+from moto import mock_dynamodb
 
 from sam.seed_ddb_data import app
 
@@ -25,7 +25,7 @@ def cloudformation_event():
     }
 
 
-@mock_dynamodb2
+@mock_dynamodb
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_seed_data(cloudformation_event):
@@ -68,7 +68,7 @@ def test_seed_data(cloudformation_event):
     assert response['Item']['name']['S'] == 'Damaged Fire Hydrant'
 
 
-@mock_dynamodb2
+@mock_dynamodb
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_seed_data_with_existing_data(cloudformation_event):

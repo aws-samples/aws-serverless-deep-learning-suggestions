@@ -4,7 +4,7 @@ from unittest import mock
 
 import boto3
 import pytest
-from moto import mock_dynamodb2
+from moto import mock_dynamodb
 
 from sam.get_submission import app
 
@@ -37,7 +37,7 @@ def apigw_event_bad_id():
     }
 
 
-@mock_dynamodb2
+@mock_dynamodb
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_lambda_handler_bad_submission_id(apigw_event_bad_id):
@@ -47,7 +47,7 @@ def test_lambda_handler_bad_submission_id(apigw_event_bad_id):
                'body'] == 'Invalid submissions_id. Submission ID must be UUIDv4 format.'
 
 
-@mock_dynamodb2
+@mock_dynamodb
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_lambda_handler_no_report(apigw_event):
@@ -84,7 +84,7 @@ def test_lambda_handler_no_report(apigw_event):
     assert 'body' not in ret
 
 
-@mock_dynamodb2
+@mock_dynamodb
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_lambda_handler_with_report(apigw_event):

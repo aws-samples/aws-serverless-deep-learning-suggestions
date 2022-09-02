@@ -4,7 +4,7 @@ from unittest import mock
 
 import boto3
 import pytest
-from moto import mock_dynamodb2
+from moto import mock_dynamodb
 
 from sam.patch_submission import app
 
@@ -84,7 +84,7 @@ def apigw_event_invalid_body():
     }
 
 
-@mock_dynamodb2
+@mock_dynamodb
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_lambda_handler_bad_submission_id(apigw_event_bad_submission_id):
@@ -94,7 +94,7 @@ def test_lambda_handler_bad_submission_id(apigw_event_bad_submission_id):
                'body'] == 'Invalid submissions_id. Submission ID must be UUIDv4 format.'
 
 
-@mock_dynamodb2
+@mock_dynamodb
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_lambda_handler_bad_body(apigw_event_bad_body):
@@ -103,7 +103,7 @@ def test_lambda_handler_bad_body(apigw_event_bad_body):
     assert ret['body'] == 'Invalid patch format. Must have an JSON body.'
 
 
-@mock_dynamodb2
+@mock_dynamodb
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_lambda_handler_invalid_body(apigw_event_invalid_body):
@@ -112,7 +112,7 @@ def test_lambda_handler_invalid_body(apigw_event_invalid_body):
     assert ret['body'] == 'Invalid patch format. Must have an action attribute.'
 
 
-@mock_dynamodb2
+@mock_dynamodb
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_lambda_handler_submit_no_reports(apigw_event):
@@ -149,7 +149,7 @@ def test_lambda_handler_submit_no_reports(apigw_event):
     assert ret['body'] == 'Submission ID Not Found'
 
 
-@mock_dynamodb2
+@mock_dynamodb
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_lambda_handler_resolve_no_reports(apigw_event_resolve):
@@ -186,7 +186,7 @@ def test_lambda_handler_resolve_no_reports(apigw_event_resolve):
     assert ret['body'] == 'Submission ID Not Found'
 
 
-@mock_dynamodb2
+@mock_dynamodb
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_lambda_handler_submit_with_reports(apigw_event):
@@ -253,7 +253,7 @@ def test_lambda_handler_submit_with_reports(apigw_event):
     assert 'report-1' in ret_body['selected_reports']
 
 
-@mock_dynamodb2
+@mock_dynamodb
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_lambda_handler_resolve_with_reports(apigw_event_resolve):

@@ -7,7 +7,7 @@ import boto3
 import botocore.session
 import pytest
 from botocore.stub import Stubber
-from moto import mock_dynamodb2, mock_s3
+from moto import mock_dynamodb, mock_s3
 
 from sam.process_upload import app
 
@@ -50,7 +50,7 @@ def s3_event_too_big():
                     },
                     'object': {
                         'key': 'maint-img/97cc0239-34fc-49d1-b87a-eb226ecc0e81',
-                        'size': 7950419213
+                        'size': 16777216
                     }
                 }
             }
@@ -130,8 +130,22 @@ def boto3_client_side_effect(*args, **kwargs):
     else:
         return boto3.client
 
+def boto3_client_side_effect_rek_invalid_image(*args, **kwargs):
+    if args[0] == 'rekognition':
+        rekognition = botocore.session.get_session().create_client(
+            'rekognition')
+        stubber = Stubber(rekognition)
+        stubber.add_client_error(
+            method='detect_labels',
+            service_error_code='InvalidImageFormatException'
+        )
+        stubber.activate()
+        return rekognition
+    else:
+        return boto3.client
 
-@mock_dynamodb2
+
+@mock_dynamodb
 @mock_s3
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
@@ -210,10 +224,19 @@ def test_lambda_handler(s3_event):
     assert 'Fire Hydrant' in response['Item']['ml_labels']['M']
 
 
-@mock_dynamodb2
+@mock_dynamodb
+@mock_s3
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_lambda_handler_image_too_big(s3_event_too_big):
+    s3 = boto3.client('s3')
+    bucket = s3.create_bucket(
+        Bucket='test-bucket-uploaded-images',
+        CreateBucketConfiguration={'LocationConstraint': 'us-west-2'}
+    )
+    with open('tests/assets/example_upload_too_big.jpg', 'rb') as data:
+        s3.upload_fileobj(data, 'test-bucket-uploaded-images',
+                          'maint-img/97cc0239-34fc-49d1-b87a-eb226ecc0e81')
     client = boto3.client('dynamodb', region_name='us-west-2')
     client.create_table(
         TableName='TEST_REPORT_TABLE',
@@ -250,9 +273,15 @@ def test_lambda_handler_image_too_big(s3_event_too_big):
         },
     )
     assert 'Item' not in response
+    response = s3.list_objects_v2(
+        Bucket='test-bucket-uploaded-images',
+        Prefix='maint-img/97cc0239-34fc-49d1-b87a-eb226ecc0e81',
+    )
+    # No S3 Object (it was deleted)
+    assert 'Contents' not in response
 
 
-@mock_dynamodb2
+@mock_dynamodb
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_lambda_handler_wrong_s3_event(s3_event_wrong_event):
@@ -294,7 +323,8 @@ def test_lambda_handler_wrong_s3_event(s3_event_wrong_event):
     assert 'Item' not in response
 
 
-@mock_dynamodb2
+
+@mock_dynamodb
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_lambda_handler_bad_id(s3_event_bad_id):
@@ -336,7 +366,7 @@ def test_lambda_handler_bad_id(s3_event_bad_id):
     assert 'Item' not in response
 
 
-@mock_dynamodb2
+@mock_dynamodb
 @mock_s3
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
@@ -395,118 +425,133 @@ def test_lambda_handler_photo_no_gps(s3_event):
     assert 'Fire Hydrant' in response['Item']['ml_labels']['M']
 
 
-@mock_dynamodb2
+@mock_dynamodb
 @mock_s3
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_lambda_handler_not_a_photo(s3_event):
-    s3 = boto3.client('s3')
-    bucket = s3.create_bucket(
-        Bucket='test-bucket-uploaded-images',
-        CreateBucketConfiguration={'LocationConstraint': 'us-west-2'}
-    )
-    with open('tests/assets/example_not_a_photo.jpg', 'rb') as data:
-        s3.upload_fileobj(data, 'test-bucket-uploaded-images',
-                          'maint-img/97cc0239-34fc-49d1-b87a-eb226ecc0e81')
-        # Because the mocked s3.download_file doesn't actually do anything.
-        shutil.copy('tests/assets/example_not_a_photo.jpg',
-                    '/tmp/97cc0239-34fc-49d1-b87a-eb226ecc0e81')
-    client = boto3.client('dynamodb', region_name='us-west-2')
-    client.create_table(
-        TableName='TEST_REPORT_TABLE',
-        KeySchema=[
-            {'AttributeName': 'pk', 'KeyType': 'HASH'},
-            {'AttributeName': 'sk', 'KeyType': 'RANGE'},
-        ],
-        GlobalSecondaryIndexes=[
-            {
-                'IndexName': 'GSI1',
-                'KeySchema': [
-                    {'AttributeName': 'gsi1pk', 'KeyType': 'HASH'},
-                    {'AttributeName': 'gsi1sk', 'KeyType': 'RANGE'},
-                ],
-                'Projection': {
-                    'ProjectionType': 'ALL'
-                }
-            }
-        ],
-        AttributeDefinitions=[
-            {'AttributeName': 'pk', 'AttributeType': 'S'},
-            {'AttributeName': 'sk', 'AttributeType': 'S'},
-            {'AttributeName': 'gsi1pk', 'AttributeType': 'S'},
-            {'AttributeName': 'gsi1sk', 'AttributeType': 'S'}
-        ],
-        BillingMode='PAY_PER_REQUEST'
-    )
     with mock.patch('boto3.client',
-                    mock.MagicMock(side_effect=boto3_client_side_effect)):
+                    mock.MagicMock(side_effect=boto3_client_side_effect_rek_invalid_image)):
+        s3 = boto3.client('s3')
+        bucket = s3.create_bucket(
+            Bucket='test-bucket-uploaded-images',
+            CreateBucketConfiguration={'LocationConstraint': 'us-west-2'}
+        )
+        with open('tests/assets/example_not_a_photo.jpg', 'rb') as data:
+            s3.upload_fileobj(data, 'test-bucket-uploaded-images',
+                              'maint-img/97cc0239-34fc-49d1-b87a-eb226ecc0e81')
+            # Because the mocked s3.download_file doesn't actually do anything.
+            shutil.copy('tests/assets/example_not_a_photo.jpg',
+                        '/tmp/97cc0239-34fc-49d1-b87a-eb226ecc0e81')
+        client = boto3.client('dynamodb', region_name='us-west-2')
+        client.create_table(
+            TableName='TEST_REPORT_TABLE',
+            KeySchema=[
+                {'AttributeName': 'pk', 'KeyType': 'HASH'},
+                {'AttributeName': 'sk', 'KeyType': 'RANGE'},
+            ],
+            GlobalSecondaryIndexes=[
+                {
+                    'IndexName': 'GSI1',
+                    'KeySchema': [
+                        {'AttributeName': 'gsi1pk', 'KeyType': 'HASH'},
+                        {'AttributeName': 'gsi1sk', 'KeyType': 'RANGE'},
+                    ],
+                    'Projection': {
+                        'ProjectionType': 'ALL'
+                    }
+                }
+            ],
+            AttributeDefinitions=[
+                {'AttributeName': 'pk', 'AttributeType': 'S'},
+                {'AttributeName': 'sk', 'AttributeType': 'S'},
+                {'AttributeName': 'gsi1pk', 'AttributeType': 'S'},
+                {'AttributeName': 'gsi1sk', 'AttributeType': 'S'}
+            ],
+            BillingMode='PAY_PER_REQUEST'
+        )
         app.lambda_handler(s3_event, None)
-    response = client.get_item(
-        TableName=os.environ['REPORT_TABLE'],
-        Key={
-            'pk': {'S': 'submission_97cc0239-34fc-49d1-b87a-eb226ecc0e81'},
-            'sk': {'S': 'submission_97cc0239-34fc-49d1-b87a-eb226ecc0e81'}
-        },
-    )
-    assert response['Item']['coords_image']['M']['latitude']['N'] == '0'
-    assert response['Item']['coords_image']['M']['longitude']['N'] == '0'
-    assert response['Item']['gsi1pk']['S'] == 'pending'
+        response = client.get_item(
+            TableName=os.environ['REPORT_TABLE'],
+            Key={
+                'pk': {'S': 'submission_97cc0239-34fc-49d1-b87a-eb226ecc0e81'},
+                'sk': {'S': 'submission_97cc0239-34fc-49d1-b87a-eb226ecc0e81'}
+            },
+        )
+        assert 'Item' not in response
+        response = s3.list_objects_v2(
+            Bucket='test-bucket-uploaded-images',
+            Prefix='maint-img/97cc0239-34fc-49d1-b87a-eb226ecc0e81',
+        )
+        # No S3 Object (it was deleted)
+        assert 'Contents' not in response
+        #assert response['Item']['coords_image']['M']['latitude']['N'] == '0'
+        #assert response['Item']['coords_image']['M']['longitude']['N'] == '0'
+        #assert response['Item']['gsi1pk']['S'] == 'pending'
 
 
-@mock_dynamodb2
+@mock_dynamodb
 @mock_s3
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_lambda_handler_empty_file(s3_event):
-    s3 = boto3.client('s3')
-    bucket = s3.create_bucket(
-        Bucket='test-bucket-uploaded-images',
-        CreateBucketConfiguration={'LocationConstraint': 'us-west-2'}
-    )
-    with open('tests/assets/example_empty_file.jpg', 'rb') as data:
-        s3.upload_fileobj(data, 'test-bucket-uploaded-images',
-                          'maint-img/97cc0239-34fc-49d1-b87a-eb226ecc0e81')
-        # Because the mocked s3.download_file doesn't actually do anything.
-        shutil.copy('tests/assets/example_empty_file.jpg',
-                    '/tmp/97cc0239-34fc-49d1-b87a-eb226ecc0e81')
-    client = boto3.client('dynamodb', region_name='us-west-2')
-    client.create_table(
-        TableName='TEST_REPORT_TABLE',
-        KeySchema=[
-            {'AttributeName': 'pk', 'KeyType': 'HASH'},
-            {'AttributeName': 'sk', 'KeyType': 'RANGE'},
-        ],
-        GlobalSecondaryIndexes=[
-            {
-                'IndexName': 'GSI1',
-                'KeySchema': [
-                    {'AttributeName': 'gsi1pk', 'KeyType': 'HASH'},
-                    {'AttributeName': 'gsi1sk', 'KeyType': 'RANGE'},
-                ],
-                'Projection': {
-                    'ProjectionType': 'ALL'
-                }
-            }
-        ],
-        AttributeDefinitions=[
-            {'AttributeName': 'pk', 'AttributeType': 'S'},
-            {'AttributeName': 'sk', 'AttributeType': 'S'},
-            {'AttributeName': 'gsi1pk', 'AttributeType': 'S'},
-            {'AttributeName': 'gsi1sk', 'AttributeType': 'S'}
-        ],
-        BillingMode='PAY_PER_REQUEST'
-    )
     with mock.patch('boto3.client',
-                    mock.MagicMock(side_effect=boto3_client_side_effect)):
-        app.lambda_handler(s3_event, None)
-    response = client.get_item(
-        TableName=os.environ['REPORT_TABLE'],
-        Key={
-            'pk': {'S': 'submission_97cc0239-34fc-49d1-b87a-eb226ecc0e81'},
-            'sk': {'S': 'submission_97cc0239-34fc-49d1-b87a-eb226ecc0e81'}
-        },
-    )
-    assert 'Item' not in response
+                    mock.MagicMock(side_effect=boto3_client_side_effect_rek_invalid_image)):
+        s3 = boto3.client('s3')
+        bucket = s3.create_bucket(
+            Bucket='test-bucket-uploaded-images',
+            CreateBucketConfiguration={'LocationConstraint': 'us-west-2'}
+        )
+        with open('tests/assets/example_empty_file.jpg', 'rb') as data:
+            s3.upload_fileobj(data, 'test-bucket-uploaded-images',
+                              'maint-img/97cc0239-34fc-49d1-b87a-eb226ecc0e81')
+            # Because the mocked s3.download_file doesn't actually do anything.
+            shutil.copy('tests/assets/example_empty_file.jpg',
+                        '/tmp/97cc0239-34fc-49d1-b87a-eb226ecc0e81')
+        client = boto3.client('dynamodb', region_name='us-west-2')
+        client.create_table(
+            TableName='TEST_REPORT_TABLE',
+            KeySchema=[
+                {'AttributeName': 'pk', 'KeyType': 'HASH'},
+                {'AttributeName': 'sk', 'KeyType': 'RANGE'},
+            ],
+            GlobalSecondaryIndexes=[
+                {
+                    'IndexName': 'GSI1',
+                    'KeySchema': [
+                        {'AttributeName': 'gsi1pk', 'KeyType': 'HASH'},
+                        {'AttributeName': 'gsi1sk', 'KeyType': 'RANGE'},
+                    ],
+                    'Projection': {
+                        'ProjectionType': 'ALL'
+                    }
+                }
+            ],
+            AttributeDefinitions=[
+                {'AttributeName': 'pk', 'AttributeType': 'S'},
+                {'AttributeName': 'sk', 'AttributeType': 'S'},
+                {'AttributeName': 'gsi1pk', 'AttributeType': 'S'},
+                {'AttributeName': 'gsi1sk', 'AttributeType': 'S'}
+            ],
+            BillingMode='PAY_PER_REQUEST'
+        )
+        with mock.patch('boto3.client',
+                        mock.MagicMock(side_effect=boto3_client_side_effect_rek_invalid_image)):
+            app.lambda_handler(s3_event, None)
+        response = client.get_item(
+            TableName=os.environ['REPORT_TABLE'],
+            Key={
+                'pk': {'S': 'submission_97cc0239-34fc-49d1-b87a-eb226ecc0e81'},
+                'sk': {'S': 'submission_97cc0239-34fc-49d1-b87a-eb226ecc0e81'}
+            },
+        )
+        assert 'Item' not in response
+        response = s3.list_objects_v2(
+            Bucket='test-bucket-uploaded-images',
+            Prefix='maint-img/97cc0239-34fc-49d1-b87a-eb226ecc0e81',
+        )
+        # No S3 Object (it was deleted)
+        assert 'Contents' not in response
 
 
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})

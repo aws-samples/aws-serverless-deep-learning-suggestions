@@ -12,6 +12,7 @@ from PIL import Image, UnidentifiedImageError
 from PIL.ExifTags import TAGS, GPSTAGS
 from boto3.dynamodb.conditions import Key
 from loguru import logger
+from botocore.exceptions import ClientError
 
 
 def lambda_handler(event, context):
@@ -34,7 +35,7 @@ def lambda_handler(event, context):
             continue
         # Rekognition supports a max image size of 15MB via S3
         if record['s3']['object']['size'] > 15728640:
-            catalog_image_too_large(submission_id, record)
+            discard_object(submission_id, record, 'too large')
             continue
         process_image(submission_id, record)
 
@@ -43,15 +44,20 @@ def process_image(submission_id, record):
     rekognition = boto3.client('rekognition')
     logger.debug(
         f"Submitting Rekognition Request for s3://{record['s3']['bucket']['name']}/{record['s3']['object']['key']}")
-    response = rekognition.detect_labels(
-        Image={
-            'S3Object': {
-                'Bucket': record['s3']['bucket']['name'],
-                'Name': record['s3']['object']['key'],
+    try:
+        response = rekognition.detect_labels(
+            Image={
+                'S3Object': {
+                    'Bucket': record['s3']['bucket']['name'],
+                    'Name': record['s3']['object']['key'],
+                },
             },
-        },
-        MinConfidence=50
-    )
+            MinConfidence=50
+        )
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'InvalidImageFormatException':
+            discard_object(submission_id, record, 'not an image')
+            return
     labels = {
         label['Name']: Decimal(label['Confidence']).quantize(Decimal("1.000"))
         for label in response['Labels']}
@@ -168,9 +174,16 @@ def determine_relevant_reports(options, labels):
     return identified_reports
 
 
-def catalog_image_too_large(submission_id, record):
-    logger.error('Image is too large: ' + submission_id)
-    # TODO: Report this back to the user via DynamoDB
+def discard_object(submission_id, record, reason):
+    logger.error('Object is ' + reason + ': ' + submission_id)
+    s3 = boto3.client('s3')
+    bucket_name = record['s3']['bucket']['name']
+    object_key = record['s3']['object']['key']
+    logger.debug(f"Deleting s3://{bucket_name}/{object_key}")
+    s3.delete_object(
+        Bucket=bucket_name,
+        Key=object_key
+    )
 
 
 def apigw_response(status_code, body=None):

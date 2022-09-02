@@ -7,7 +7,7 @@ license = "MIT-0"
 
 [tool.poetry.dependencies]
 python = "~3.9"
-boto3 = "^1.22.5"
+boto3 = "^1.24.66"
 loguru = "^0.6.0"
 simplejson = "^3.17.6"
 crhelper = "^2.0.11"

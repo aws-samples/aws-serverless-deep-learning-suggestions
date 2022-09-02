@@ -4,7 +4,7 @@ from unittest import mock
 
 import boto3
 import pytest
-from moto import mock_dynamodb2
+from moto import mock_dynamodb
 
 from sam.get_reports import app
 
@@ -21,7 +21,7 @@ def apigw_event():
     }
 
 
-@mock_dynamodb2
+@mock_dynamodb
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_lambda_handler_no_reports(apigw_event):
@@ -58,7 +58,7 @@ def test_lambda_handler_no_reports(apigw_event):
     assert 'body' not in ret
 
 
-@mock_dynamodb2
+@mock_dynamodb
 @mock.patch.dict(os.environ, {'REPORT_TABLE': 'TEST_REPORT_TABLE'})
 @mock.patch.dict(os.environ, {'ALLOW_ORIGIN_HEADER_VALUE': 'TEST_HEADER_VALUE'})
 def test_lambda_handler_with_report(apigw_event):

@@ -488,7 +488,7 @@ Resources:
             QueueName: !Sub
               - DL-Suggest-Blog-Process-Image-DLQ-${Unique}
               - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
-        - S3ReadPolicy:
+        - S3CrudPolicy:
             BucketName: !Sub
               - dl-suggest-blog-uploaded-images-${Unique}/maint-img/*
               - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
