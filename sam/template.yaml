@@ -49,16 +49,14 @@ Resources:
         Comment: Deep Learning Suggestion Blog Static Website Amazon CloudFront Identity
   StaticWebsite:
     Type: AWS::S3::Bucket
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: W35
-            reason: This is not necessary for this project. Customers can enable this if they wish to view the access logs.
     Properties:
       BucketName: !Sub
         - dl-suggest-blog-static-website-${Unique}
         - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
       AccessControl: Private
+      LoggingConfiguration:
+        DestinationBucketName: !Ref LoggingBucket
+        LogFilePrefix: s3-static-website/
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -70,16 +68,14 @@ Resources:
               SSEAlgorithm: AES256
   UploadedImages:
     Type: AWS::S3::Bucket
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: W35
-            reason: This is not necessary for this project. Customers can enable this if they wish to view the access logs.
     Properties:
       BucketName: !Sub
         - dl-suggest-blog-uploaded-images-${Unique}
         - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
       AccessControl: Private
+      LoggingConfiguration:
+        DestinationBucketName: !Ref LoggingBucket
+        LogFilePrefix: s3-uploaded-images/
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -174,13 +170,85 @@ Resources:
             Condition:
               Bool:
                 aws:SecureTransport: 'false'
+  LoggingBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: Unnecessary to log access to the logging bucket.
+    Properties:
+      BucketName: !Sub
+        - dl-suggest-blog-logging-${Unique}
+        - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+  LoggingBucketBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DependsOn: LoggingBucket
+    Properties:
+      Bucket: !Sub
+        - dl-suggest-blog-logging-${Unique}
+        - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Id: WebAccess
+        Statement:
+          - Sid: S3ServerAccessLogsPolicy
+            Effect: Allow
+            Principal:
+              Service: logging.s3.amazonaws.com
+            Action:
+              - s3:PutObject
+            Resource: !Sub
+              - arn:${AWS::Partition}:s3:::dl-suggest-blog-logging-${Unique}/*
+              - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+            Condition:
+              ArnEquals:
+                aws:SourceArn:
+                  - !Sub
+                    - arn:${AWS::Partition}:s3:::dl-suggest-blog-static-website-${Unique}
+                    - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+                  - !Sub
+                    - arn:${AWS::Partition}:s3:::dl-suggest-blog-uploaded-images-${Unique}
+                    - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+              StringEquals:
+                aws:SourceAccount: !Ref 'AWS::AccountId'
+          - Sid: DenyPlaintextAccess
+            Principal: '*'
+            Effect: Deny
+            Action: s3:*
+            Resource:
+              - !Sub
+                - arn:${AWS::Partition}:s3:::dl-suggest-blog-logging-${Unique}
+                - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+              - !Sub
+                - arn:${AWS::Partition}:s3:::dl-suggest-blog-logging-${Unique}/*
+                - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+  APIGatewayLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - /aws/apigateway/DLSuggestBlog-${Unique}
+        - Unique: !Select [ 4, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+      RetentionInDays: 30
   CloudFront:
     Type: AWS::CloudFront::Distribution
     Metadata:
       cfn_nag:
         rules_to_suppress:
-          - id: W10
-            reason: This is not necessary for this project. Customers can enable this if they wish to view the access logs.
           - id: W70
             reason: When using the default CloudFront distribution domain you cannot specify the TLS version options. Changing from the default CloudFront distribution would significantly increase the scope and cost of the project by requiring the customer to select a custom domain, deploy a Route53 Hosted Zone, and generate an ACM Certificate.
     Properties:
@@ -193,6 +261,10 @@ Resources:
         #    Locations:
         #      - US
         #    RestrictionType: whitelist
+        Logging:
+          Bucket: !GetAtt LoggingBucket.DomainName
+          Prefix: cloudfront
+          IncludeCookies: true
         DefaultCacheBehavior:
           ForwardedValues:
             QueryString: true
@@ -257,13 +329,6 @@ Resources:
         SSEEnabled: true
   API:
     Type: AWS::Serverless::Api
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          # There is currently a bug with cfn_nag that does not propagate these supressions to generated resources
-          # See: https://github.com/stelligent/cfn_nag/issues/422
-          - id: W69
-            reason: This is not necessary for this project. Customers can enable this if they wish to view the access logs.
     Properties:
       StageName: v1
       Auth:
@@ -278,6 +343,9 @@ Resources:
             # on how many requests are legitimate.
             Limit: 72000
             Period: DAY
+      AccessLogSetting:
+        DestinationArn: !GetAtt APIGatewayLogGroup.Arn
+        Format: '{"requestId":"$context.requestId","extendedRequestId":"$context.extendedRequestId","ip":"$context.identity.sourceIp","caller":"$context.identity.caller","user":"$context.identity.user","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","resourcePath":"$context.resourcePath","status":"$context.status","protocol":"$context.protocol","responseLength":"$context.responseLength"}'
       Cors:
         AllowMethods: '''DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'''
         AllowHeaders: '''Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'''
