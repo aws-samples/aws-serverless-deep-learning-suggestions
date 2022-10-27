@@ -329,6 +329,7 @@ Resources:
         SSEEnabled: true
   API:
     Type: AWS::Serverless::Api
+    DependsOn: APILogsRoleAttachment
     Properties:
       StageName: v1
       Auth:
@@ -350,6 +351,23 @@ Resources:
         AllowMethods: '''DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'''
         AllowHeaders: '''Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'''
         AllowOrigin: !If [ StrictOriginOn, !Sub '''https://${CloudFront.DomainName}''', '''*''' ]
+  APILogsRoleAttachment:
+    Type: AWS::ApiGateway::Account
+    Properties:
+      CloudWatchRoleArn: !GetAtt APILogsRole.Arn
+  APILogsRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+        Path: /
+        ManagedPolicyArns:
+          - 'arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs'
   GetSubmissionsLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
