@@ -1,6 +1,8 @@
 # Deep Learning Suggestion Example
 
-An interactive mobile website and backend to create a fluid experience for citizens reporting issues in their area.
+AWS Public Sector News Blog: [Enhance the citizen experience with deep learning-powered suggestions](#)
+
+This solution is an example of a government service in which citzens can submit images of damaged government or public property through a mobile website. When people upload images to the website, the solution uses machine learning (ML) to identify the type of damaged property, and then routes that information along with location data to the appriopriate government agency, where a government official can triage the issue for remediation.
 
 For deployment instructions see [DEPLOYMENT](./docs/DEPLOYMENT.md).
 
@@ -10,10 +12,10 @@ For deployment instructions see [DEPLOYMENT](./docs/DEPLOYMENT.md).
 
 ## Workflows
 
-This example application has two general workflows:
+This solution has two workflows, one for the citizen, and one for the government worker::
 
-1. Citizen Workflow - A citizen loads a mobile web page, takes a picture, submits picture for suggestion processing, makes a selection on the report type, then submits the report.
-2. Government Workflow - A government worker loads desktop web page, retrieves the submitted reports and renders those as pins on a map with details, which can then be dismissed/resolved.
+1. Citizen Workflow - Citizens load a mobile web page and submit a report of damaged government property by taking a picture of the damaged area.
+2. Government Workflow - Government workers load a desktop web page and view a map of reported damage.
 
 ## Citizen Workflow
 
@@ -29,7 +31,6 @@ This example application has two general workflows:
 8. Immediately after step #3, the browser begins checking for the processed image results every 500ms via API Gateway.
 9. Each API Gateway request calls a Lambda function to get report types or results from a processed image.
 10. Lambda function retrieves the relevant data from the DynamoDB table. User makes a selection on the type of report they want to submit, and it is submitted via second 8-10 sequence.
-
 
 ## Government Workflow
 
