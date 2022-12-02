@@ -66,6 +66,14 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldVersionAfter90Days
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 90
   UploadedImages:
     Type: AWS::S3::Bucket
     Properties:
@@ -85,6 +93,14 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldVersionAfter90Days
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 90
       CorsConfiguration:
         CorsRules:
           - AllowedHeaders:
@@ -192,6 +208,14 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldVersionAfter90Days
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 90
   LoggingBucketBucketPolicy:
     Type: AWS::S3::BucketPolicy
     DependsOn: LoggingBucket
