@@ -71,7 +71,7 @@ async function initializeMap() {
     map.on('load', function () {
         map.resize();
         map.loadImage(
-            'https://maplibre.org/maplibre-gl-js-docs/assets/custom_marker.png',
+            'js/custom_marker.png',
             // Add an image to use as a custom marker
             function (error, image) {
                 if (error) throw error;
