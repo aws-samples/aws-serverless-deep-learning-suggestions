@@ -9,7 +9,7 @@ license = "MIT-0"
 python = "~3.9"
 boto3 = "^1.24.66"
 loguru = "^0.6.0"
-Pillow = "^9.2.0"
+Pillow = "^10.0.1"
 simplejson = "^3.17.6"
 
 [tool.poetry.dev-dependencies]
