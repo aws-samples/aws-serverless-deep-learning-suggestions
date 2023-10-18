@@ -119,6 +119,7 @@ Resources:
             MaxAge: 3600
   StaticWebsiteBucketPolicy:
     Type: AWS::S3::BucketPolicy
+    DependsOn: StaticWebsite
     Properties:
       Bucket: !Sub
         - dl-suggest-blog-static-website-${Unique}
@@ -412,7 +413,7 @@ Resources:
     Properties:
       CodeUri: get_submissions/
       Handler: app.lambda_handler
-      Runtime: python3.9
+      Runtime: python3.11
       Timeout: 5
       Events:
         ApiEvent:
@@ -451,7 +452,7 @@ Resources:
     Properties:
       CodeUri: get_submission/
       Handler: app.lambda_handler
-      Runtime: python3.9
+      Runtime: python3.11
       Timeout: 5
       Events:
         ApiEvent:
@@ -490,7 +491,7 @@ Resources:
     Properties:
       CodeUri: patch_submission/
       Handler: app.lambda_handler
-      Runtime: python3.9
+      Runtime: python3.11
       Timeout: 5
       Events:
         ApiEvent:
@@ -529,7 +530,7 @@ Resources:
     Properties:
       CodeUri: get_reports/
       Handler: app.lambda_handler
-      Runtime: python3.9
+      Runtime: python3.11
       Timeout: 5
       Events:
         ApiEvent:
@@ -568,7 +569,7 @@ Resources:
     Properties:
       CodeUri: process_upload/
       Handler: app.lambda_handler
-      Runtime: python3.9
+      Runtime: python3.11
       Timeout: 30
       Events:
         ApiEvent:
@@ -619,7 +620,7 @@ Resources:
     Properties:
       CodeUri: seed_ddb_data/
       Handler: app.handler
-      Runtime: python3.9
+      Runtime: python3.11
       Timeout: 30
       Architectures:
         - arm64
@@ -648,7 +649,7 @@ Resources:
     Properties:
       CodeUri: seed_s3_data/
       Handler: app.handler
-      Runtime: python3.9
+      Runtime: python3.11
       Timeout: 30
       Architectures:
         - arm64
