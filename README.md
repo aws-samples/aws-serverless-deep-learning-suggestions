@@ -1,6 +1,6 @@
 # Deep Learning Suggestion Example
 
-AWS Public Sector News Blog: [Enhance the citizen experience with deep learning-powered suggestions](#)
+AWS Public Sector News Blog: [Enhance the citizen experience with deep learning-powered suggestions](https://aws.amazon.com/blogs/publicsector/enhance-citizen-experience-with-deep-learning-powered-suggestions/)
 
 This solution is an example of a government service in which citzens can submit images of damaged government or public property through a mobile website. When people upload images to the website, the solution uses machine learning (ML) to identify the type of damaged property, and then routes that information along with location data to the appriopriate government agency, where a government official can triage the issue for remediation.
 
